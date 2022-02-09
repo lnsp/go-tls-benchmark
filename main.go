@@ -8,34 +8,36 @@ import (
 	"os/signal"
 	"runtime/pprof"
 	"syscall"
+	"time"
 )
 
 var (
-	tlsKeyFile = flag.String("tls-key", "", "tls private key file")
+	tlsKeyFile  = flag.String("tls-key", "", "tls private key file")
 	tlsCertFile = flag.String("tls-cert", "", "tls certificate file")
-	cpuProfile = flag.String("cpu-profile", "", "write cpu profile to `file`")
+	cpuProfile  = flag.String("cpu-profile", "", "write cpu profile to `file`")
 )
 
 func main() {
 	flag.Parse()
+	start := time.Now()
 	// Setup profiling
 	if *cpuProfile != "" {
-        f, err := os.Create(*cpuProfile)
-        if err != nil {
-            log.Fatal("could not create CPU profile: ", err)
-        }
-        defer f.Close() // error handling omitted for example
-        if err := pprof.StartCPUProfile(f); err != nil {
-            log.Fatal("could not start CPU profile: ", err)
-        }
-        defer pprof.StopCPUProfile()
-    }
+		f, err := os.Create(*cpuProfile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 	// Setup HTTP
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello, world\n"))
 	})
 	server := &http.Server{
-		Addr: ":8443",
+		Addr:    ":8443",
 		Handler: handler,
 	}
 	// Setup signal handler
@@ -46,4 +48,7 @@ func main() {
 	if err := server.ListenAndServeTLS(*tlsCertFile, *tlsKeyFile); err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+	// Log termination time
+	duration := time.Since(start)
+	log.Printf("Terminated after %s", duration)
 }
